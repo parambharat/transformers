@@ -656,8 +656,8 @@ class WandbCallback(TrainerCallback):
 
             self._wandb = wandb
         self._initialized = False
-        # log outputs
-        self._log_model = os.getenv("WANDB_LOG_MODEL", "FALSE").upper() in ENV_VARS_TRUE_VALUES.union({"TRUE"})
+        # log model
+        self._log_model = os.getenv("WANDB_LOG_MODEL", "false").lower()
 
     def setup(self, args, state, model, **kwargs):
         """
@@ -737,7 +737,7 @@ class WandbCallback(TrainerCallback):
     def on_train_end(self, args, state, control, model=None, tokenizer=None, **kwargs):
         if self._wandb is None:
             return
-        if self._log_model and self._initialized and state.is_world_process_zero:
+        if self._log_model in ("end", "checkpoint") and self._initialized and state.is_world_process_zero:
             from .trainer import Trainer
 
             fake_trainer = Trainer(args=args, model=model, tokenizer=tokenizer)
@@ -755,6 +755,7 @@ class WandbCallback(TrainerCallback):
                         "train/total_floss": state.total_flos,
                     }
                 )
+                logger.info(f"Logging model artifacts. This may take some time.")
                 artifact = self._wandb.Artifact(name=f"model-{self._wandb.run.id}", type="model", metadata=metadata)
                 for f in Path(temp_dir).glob("*"):
                     if f.is_file():
@@ -770,6 +771,23 @@ class WandbCallback(TrainerCallback):
         if state.is_world_process_zero:
             logs = rewrite_logs(logs)
             self._wandb.log({**logs, "train/global_step": state.global_step})
+
+    def on_save(self, args, state, control, **kwargs):
+        if self._log_model == "checkpoint" and self._initialized and state.is_world_process_zero:
+            checkpoint_metadata = {
+                k: v
+                for k, v in dict(self._wandb.summary).items()
+                if isinstance(v, numbers.Number) and not k.startswith("_")
+            }
+
+            ckpt_dir = f"checkpoint-{state.global_step}"
+            artifact_path = os.path.join(args.output_dir, ckpt_dir)
+            logger.info(f"Logging checkpoint artifacts in {ckpt_dir}. This may take some time.")
+            artifact = self._wandb.Artifact(
+                name=f"checkpoint-{self._wandb.run.id}", type="checkpoint", metadata=checkpoint_metadata
+            )
+            artifact.add_dir(artifact_path)
+            self._wandb.log_artifact(artifact, aliases=[f"checkpoint-{state.global_step}"])
 
 
 class CometCallback(TrainerCallback):
