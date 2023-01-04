@@ -644,7 +644,7 @@ class TensorBoardCallback(TrainerCallback):
 
 class WandbCallback(TrainerCallback):
     """
-    A [`TrainerCallback`] that sends the logs to [Weight and Biases](https://www.wandb.com/).
+    A [`TrainerCallback`] that logs metrics, media, model and checkpoints artifacts to [Weight and Biases](https://www.wandb.com/).
     """
 
     def __init__(self):
@@ -664,20 +664,24 @@ class WandbCallback(TrainerCallback):
         Setup the optional Weights & Biases (*wandb*) integration.
 
         One can subclass and override this method to customize the setup if needed. Find more information
-        [here](https://docs.wandb.ai/integrations/huggingface). You can also override the following environment
+        [here](https://docs.wandb.ai/guides/integrations/huggingface). You can also override the following environment
         variables:
 
-        Environment:
-            WANDB_LOG_MODEL (`bool`, *optional*, defaults to `False`):
-                Whether or not to log model as artifact at the end of training. Use along with
-                *TrainingArguments.load_best_model_at_end* to upload best model.
-            WANDB_WATCH (`str`, *optional* defaults to `"gradients"`):
-                Can be `"gradients"`, `"all"` or `"false"`. Set to `"false"` to disable gradient logging or `"all"` to
-                log gradients and parameters.
-            WANDB_PROJECT (`str`, *optional*, defaults to `"huggingface"`):
-                Set this to a custom string to store results in a different project.
-            WANDB_DISABLED (`bool`, *optional*, defaults to `False`):
-                Whether or not to disable wandb entirely. Set *WANDB_DISABLED=true* to disable.
+        Parameters:
+            Environment Variables:
+                WANDB_LOG_MODEL (`str`, *optional*, defaults to `"false"`):
+                    Whether to log model as artifact at the end of training.
+                    Can be `"end"`, `"checkpoint"` or `"false"`. If set to `"end"`, the model artifact will be logged
+                    at the end of training. If set to `"checkpoint"`, the model artifact will be logged at every
+                    checkpoint. If set to `"false"`, the model artifact will not be logged.
+                    Use along with *TrainingArguments.load_best_model_at_end* to upload best model.
+                WANDB_WATCH (`str`, *optional* defaults to `"false"`):
+                    Can be `"gradients"`, `"all"`, `"parameters"`, or `"false"`. Set to `"all"` to
+                    log gradients and parameters.
+                WANDB_PROJECT (`str`, *optional*, defaults to `"huggingface"`):
+                    Set this to a custom string to store results in a different project.
+                WANDB_DISABLED (`bool`, *optional*, defaults to `False`):
+                    Whether to disable wandb entirely. Set *WANDB_DISABLED=true* to disable.
         """
         if self._wandb is None:
             return
