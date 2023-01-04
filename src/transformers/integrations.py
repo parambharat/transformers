@@ -755,7 +755,7 @@ class WandbCallback(TrainerCallback):
                         "train/total_floss": state.total_flos,
                     }
                 )
-                logger.info(f"Logging model artifacts. This may take some time.")
+                logger.info("Logging model artifacts. This may take some time.")
                 artifact = self._wandb.Artifact(name=f"model-{self._wandb.run.id}", type="model", metadata=metadata)
                 for f in Path(temp_dir).glob("*"):
                     if f.is_file():
