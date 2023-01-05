@@ -698,15 +698,16 @@ class WandbCallback(TrainerCallback):
             trial_name = state.trial_name
             init_args = {}
             if trial_name is not None:
-                run_name = trial_name
+                init_args["name"] = trial_name
                 init_args["group"] = args.run_name
             else:
-                run_name = args.run_name
+                if not (args.run_name is None or args.run_name == args.output_dir):
+                    init_args["name"] = args.run_name
 
             if self._wandb.run is None:
+
                 self._wandb.init(
                     project=os.getenv("WANDB_PROJECT", "huggingface"),
-                    name=run_name,
                     **init_args,
                 )
             # add config parameters (run may have been created manually)
