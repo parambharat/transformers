@@ -644,7 +644,8 @@ class TensorBoardCallback(TrainerCallback):
 
 class WandbCallback(TrainerCallback):
     """
-    A [`TrainerCallback`] that logs metrics, media, model and checkpoints artifacts to [Weight and Biases](https://www.wandb.com/).
+    A [`TrainerCallback`] that logs metrics, media, model and checkpoints artifacts to [Weight and
+    Biases](https://www.wandb.com/).
     """
 
     def __init__(self):
@@ -670,14 +671,14 @@ class WandbCallback(TrainerCallback):
         Parameters:
             Environment Variables:
                 WANDB_LOG_MODEL (`str`, *optional*, defaults to `"false"`):
-                    Whether to log model as artifact at the end of training.
-                    Can be `"end"`, `"checkpoint"` or `"false"`. If set to `"end"`, the model artifact will be logged
-                    at the end of training. If set to `"checkpoint"`, the model artifact will be logged at every
-                    checkpoint. If set to `"false"`, the model artifact will not be logged.
-                    Use along with *TrainingArguments.load_best_model_at_end* to upload best model.
+                    Whether to log model as artifact at the end of training. Can be `"end"`, `"checkpoint"` or
+                    `"false"`. If set to `"end"`, the model artifact will be logged at the end of training. If set to
+                    `"checkpoint"`, the model artifact will be logged at every checkpoint. If set to `"false"`, the
+                    model artifact will not be logged. Use along with *TrainingArguments.load_best_model_at_end* to
+                    upload best model.
                 WANDB_WATCH (`str`, *optional* defaults to `"false"`):
-                    Can be `"gradients"`, `"all"`, `"parameters"`, or `"false"`. Set to `"all"` to
-                    log gradients and parameters.
+                    Can be `"gradients"`, `"all"`, `"parameters"`, or `"false"`. Set to `"all"` to log gradients and
+                    parameters.
                 WANDB_PROJECT (`str`, *optional*, defaults to `"huggingface"`):
                     Set this to a custom string to store results in a different project.
                 WANDB_DISABLED (`bool`, *optional*, defaults to `False`):
@@ -721,7 +722,6 @@ class WandbCallback(TrainerCallback):
             _watch_model = os.getenv("WANDB_WATCH", "false")
             if not is_torch_tpu_available() and _watch_model in ("all", "parameters", "gradients"):
                 self._wandb.watch(model, log=_watch_model, log_freq=max(100, args.logging_steps))
-
 
     def on_train_begin(self, args, state, control, model=None, **kwargs):
         if self._wandb is None:
