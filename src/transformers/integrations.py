@@ -644,8 +644,7 @@ class TensorBoardCallback(TrainerCallback):
 
 class WandbCallback(TrainerCallback):
     """
-    A [`TrainerCallback`] that logs metrics, media, model and checkpoints artifacts to [Weight and
-    Biases](https://www.wandb.com/).
+    A [`TrainerCallback`] that logs metrics, media, model checkpoints to [Weight and Biases](https://www.wandb.com/).
     """
 
     def __init__(self):
@@ -658,7 +657,15 @@ class WandbCallback(TrainerCallback):
             self._wandb = wandb
         self._initialized = False
         # log model
-        self._log_model = os.getenv("WANDB_LOG_MODEL", "false").lower()
+        if os.getenv("WANDB_LOG_MODEL", "FALSE").upper() in ENV_VARS_TRUE_VALUES.union({"TRUE"}):
+            DeprecationWarning(
+                f"Setting `WANDB_LOG_MODEL` as {os.getenv('WANDB_LOG_MODEL')} is deprecated and will be removed in "
+                "future versions. Use one of `end` or `checkpoint` instead."
+            )
+            logger.info(f"Setting `WANDB_LOG_MODEL` from {os.getenv('WANDB_LOG_MODEL')} to `end` instead")
+            self._log_model = "end"
+        else:
+            self._log_model = os.getenv("WANDB_LOG_MODEL", "false").lower()
 
     def setup(self, args, state, model, **kwargs):
         """
@@ -670,11 +677,12 @@ class WandbCallback(TrainerCallback):
 
         Environment:
         - **WANDB_LOG_MODEL** (`str`, *optional*, defaults to `"false"`):
-                    Whether to log model as artifact at the end of training. Can be `"end"`, `"checkpoint"` or
-                    `"false"`. If set to `"end"`, the model artifact will be logged at the end of training. If set to
-                    `"checkpoint"`, the model artifact will be logged at every checkpoint. If set to `"false"`, the
-                    model artifact will not be logged. Use along with *TrainingArguments.load_best_model_at_end* to
-                    upload best model.
+                    Whether to log model and checkpoints during training. Can be `"end"`, `"checkpoint"` or `"false"`.
+                    If set to `"end"`, the model will be uploaded at the end of training. If set to `"checkpoint"`, the
+                    checkpoint will be uploaded every `args.save_steps` . If set to `"false"`, the model will not be
+                    uploaded. Use along with *TrainingArguments.load_best_model_at_end* to upload best model.
+                    *Warning*: Setting `WANDB_LOG_MODEL` as `bool` is deprecated and will be removed in future
+                    versions.
         - **WANDB_WATCH** (`str`, *optional* defaults to `"false"`):
                     Can be `"gradients"`, `"all"`, `"parameters"`, or `"false"`. Set to `"all"` to log gradients and
                     parameters.
@@ -755,8 +763,13 @@ class WandbCallback(TrainerCallback):
                         "train/total_floss": state.total_flos,
                     }
                 )
-                logger.info("Logging model artifacts. This may take some time.")
-                artifact = self._wandb.Artifact(name=f"model-{self._wandb.run.id}", type="model", metadata=metadata)
+                logger.info("Logging model artifacts. ...")
+                model_name = (
+                    f"model-{self._wandb.run.id}"
+                    if (args.run_name is None or args.run_name == args.output_dir)
+                    else f"model-{self._wandb.run.name}"
+                )
+                artifact = self._wandb.Artifact(name=model_name, type="model", metadata=metadata)
                 for f in Path(temp_dir).glob("*"):
                     if f.is_file():
                         with artifact.new_file(f.name, mode="wb") as fa:
@@ -782,10 +795,13 @@ class WandbCallback(TrainerCallback):
 
             ckpt_dir = f"checkpoint-{state.global_step}"
             artifact_path = os.path.join(args.output_dir, ckpt_dir)
-            logger.info(f"Logging checkpoint artifacts in {ckpt_dir}. This may take some time.")
-            artifact = self._wandb.Artifact(
-                name=f"checkpoint-{self._wandb.run.id}", type="checkpoint", metadata=checkpoint_metadata
+            logger.info(f"Logging checkpoint artifacts in {ckpt_dir}. ...")
+            checkpoint_name = (
+                f"checkpoint-{self._wandb.run.id}"
+                if (args.run_name is None or args.run_name == args.output_dir)
+                else f"checkpoint-{self._wandb.run.name}"
             )
+            artifact = self._wandb.Artifact(name=checkpoint_name, type="model", metadata=checkpoint_metadata)
             artifact.add_dir(artifact_path)
             self._wandb.log_artifact(artifact, aliases=[f"checkpoint-{state.global_step}"])
 
